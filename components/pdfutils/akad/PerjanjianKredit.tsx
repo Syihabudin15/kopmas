@@ -441,7 +441,9 @@ export const PerjanjianKredit = (record: IDapem) => {
       </div>
     </div>
 
-    <div class="ml-4 my-3">
+   ${
+     record.ProdukPembiayaan.Sumdan.code === "KOP MAS" &&
+     `<div class="ml-4 my-3">
       <p class="font-bold">${record.ProdukPembiayaan.Sumdan.name}</p>
       <div class="flex gap-2">
         <p class="w-44">Up</p>
@@ -461,7 +463,8 @@ export const PerjanjianKredit = (record: IDapem) => {
         <p class="w-4">:</p>
         <p class="flex-1">${record.ProdukPembiayaan.Sumdan.email}</p>
       </div>
-    </div>
+    </div>`
+   }
 
   </div>
 
