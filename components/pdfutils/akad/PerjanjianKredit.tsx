@@ -442,7 +442,7 @@ export const PerjanjianKredit = (record: IDapem) => {
     </div>
 
    ${
-     record.ProdukPembiayaan.Sumdan.code === "KOP MAS" &&
+     record.ProdukPembiayaan.Sumdan.code !== "KOP MAS" &&
      `<div class="ml-4 my-3">
       <p class="font-bold">${record.ProdukPembiayaan.Sumdan.name}</p>
       <div class="flex gap-2">
