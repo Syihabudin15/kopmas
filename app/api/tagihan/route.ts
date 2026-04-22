@@ -43,7 +43,8 @@ export const GET = async (req: NextRequest) => {
         ],
       }),
       ...(user.sumdanId && { ProdukPembiayaan: { sumdanId: user.sumdanId } }),
-      ...(sumdanId && { ProdukPembiayaan: { sumdanId: sumdanId } }),
+      ...(!user.sumdanId &&
+        sumdanId && { ProdukPembiayaan: { sumdanId: sumdanId } }),
       Angsuran: {
         some: {
           date_pay: {
@@ -117,7 +118,8 @@ export const GET = async (req: NextRequest) => {
         ],
       }),
       ...(user.sumdanId && { ProdukPembiayaan: { sumdanId: user.sumdanId } }),
-      ...(sumdanId && { ProdukPembiayaan: { sumdanId: sumdanId } }),
+      ...(!user.sumdanId &&
+        sumdanId && { ProdukPembiayaan: { sumdanId: sumdanId } }),
       Angsuran: {
         some: {
           date_pay: {

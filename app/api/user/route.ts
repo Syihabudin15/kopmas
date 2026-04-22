@@ -5,6 +5,7 @@ import { User } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcrypt";
 import { getSession } from "@/libs/Auth";
+import { serializeForApi } from "@/components/utils/PembiayaanUtil";
 
 export const GET = async (request: NextRequest) => {
   const page = request.nextUrl.searchParams.get("page") || "1";
@@ -78,7 +79,7 @@ export const GET = async (request: NextRequest) => {
 
   return NextResponse.json({
     status: 200,
-    data: find,
+    data: serializeForApi(find),
     total: total,
   });
 };
@@ -122,7 +123,7 @@ export const PUT = async (request: NextRequest) => {
     const find = await prisma.user.findFirst({ where: { id } });
 
     if (find) {
-      if (body.password && body.password.length < 20) {
+      if (body.password && body.password !== "" && body.password.length < 20) {
         updated.password = await bcrypt.hash(body.password, 10);
       } else {
         updated.password = find.password;

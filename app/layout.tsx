@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { App, ConfigProvider } from "antd";
 import { UserProvider } from "@/components/UserContext";
-import "./globals.css";
+import "@/app/globals.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -34,6 +34,8 @@ export default function RootLayout({
           theme={{
             token: {
               fontFamily: "var(--font-geist-mono)",
+              borderRadius: 10,
+              fontSize: 13,
             },
           }}
         >

@@ -93,7 +93,7 @@ export const PATCH = async (req: NextRequest) => {
       { status: 400 },
     );
 
-  const nomor = `${String(count + 1).padStart(3, "0")}/TTPJ${sumdan.code.replace("BPR", "").replace(" ", "")}/${GetRoman(new Date().getMonth() + 1)}/${new Date().getFullYear()}`;
+  const nomor = `${String(count + 1).padStart(3, "0")}/${process.env.NEXT_PUBLIC_APP_CODE_FILE}/TTPJ-${sumdan.code.replace("BPR", "").replace(" ", "")}/${GetRoman(new Date().getMonth() + 1)}/${new Date().getFullYear()}`;
 
   return NextResponse.json({ data: nomor, status: 200 }, { status: 200 });
 };

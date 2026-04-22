@@ -55,6 +55,8 @@ export const POST = async (req: NextRequest) => {
       principal: 0,
       margin: 0,
       remaining: find.plafond,
+      inst_sumdan: 0,
+      fee_banpot: 0,
     });
     return NextResponse.json(
       { msg: "Berhasil memperbarui data akad!", status: 200, data: result },
@@ -90,6 +92,13 @@ function GenerateAnuitas(dapem: Dapem): Angsuran[] {
     dapem.margin_type,
     dapem.rounded,
   ).angsuran;
+  const angsudan = GetAngsuran(
+    dapem.plafond,
+    dapem.tenor,
+    dapem.c_margin_sumdan,
+    dapem.margin_type,
+    dapem.rounded_sumdan,
+  ).angsuran;
   let sisa = dapem.plafond;
 
   for (let i = 1; i <= dapem.tenor; i++) {
@@ -112,6 +121,8 @@ function GenerateAnuitas(dapem: Dapem): Angsuran[] {
       margin: bungaBulan,
       remaining: sisa,
       dapemId: dapem.id,
+      inst_sumdan: angsudan,
+      fee_banpot: 0,
     });
   }
   return angsurans;
@@ -128,6 +139,13 @@ function GenerateFlat(dapem: Dapem): Angsuran[] {
     dapem.c_margin + dapem.c_margin_sumdan,
     dapem.margin_type,
     dapem.rounded,
+  ).angsuran;
+  const angsudan = GetAngsuran(
+    dapem.plafond,
+    dapem.tenor,
+    dapem.c_margin_sumdan,
+    dapem.margin_type,
+    dapem.rounded_sumdan,
   ).angsuran;
   let sisa = dapem.plafond;
 
@@ -148,6 +166,8 @@ function GenerateFlat(dapem: Dapem): Angsuran[] {
       margin: angsuran - pokok,
       remaining: sisa,
       dapemId: dapem.id,
+      inst_sumdan: angsudan,
+      fee_banpot: 0,
     });
   }
   return angsurans;

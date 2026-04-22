@@ -1,23 +1,24 @@
 import {
   GetAngsuran,
+  GetDapem,
   GetFullAge,
   IDRFormat,
 } from "@/components/utils/PembiayaanUtil";
 import { IDapem } from "@/libs/IInterfaces";
 import moment from "moment";
-import { Header } from "../utils";
+import { Header, ListNonStyle } from "../utils";
 
 export const AnalisaPerhitungan = (record: IDapem) => {
   const age = GetFullAge(
     record.Debitur.birthdate,
     record.date_contract || record.created_at,
   );
-  const ageLunas = GetFullAge(
-    record.Debitur.birthdate,
-    moment(record.date_contract || record.created_at)
-      .add(record.tenor, "month")
-      .toDate(),
-  );
+  // const ageLunas = GetFullAge(
+  //   record.Debitur.birthdate,
+  //   moment(record.date_contract || record.created_at)
+  //     .add(record.tenor, "month")
+  //     .toDate(),
+  // );
   const angsuran = GetAngsuran(
     record.plafond,
     record.tenor,
@@ -37,6 +38,8 @@ export const AnalisaPerhitungan = (record: IDapem) => {
     record.c_gov +
     record.c_account +
     record.c_stamp +
+    record.c_infomation +
+    record.c_provisi +
     record.c_mutasi;
 
   return `
@@ -44,105 +47,83 @@ export const AnalisaPerhitungan = (record: IDapem) => {
   
   <div class="mt-4 flex gap-4">
     <div class="flex-1">
-      <div class="flex gap-2">
-        <div class="w-32">Nama Pemohon</div>
-        <div class="w-4">:</div>
-        <div>${record.Debitur.fullname}</div>
-      </div>
-      <div class="flex gap-2">
-        <div class="w-32">Nomor Pensiun</div>
-        <div class="w-4">:</div>
-        <div>${record.Debitur.nopen}</div>
-      </div>
-      <div class="flex gap-2">
-        <div class="w-32">Tanggal Lahir</div>
-        <div class="w-4">:</div>
-        <div>${moment(record.Debitur.birthdate).format("DD/MM/YYYY")}</div>
-      </div>
-      <div class="flex gap-2">
-        <div class="w-32">Jenis Pembiayaan</div>
-        <div class="w-4">:</div>
-        <div>${record.JenisPembiayaan.name}</div>
-      </div>
-      <div class="flex gap-2">
-        <div class="w-32">Produk Pembiayaan</div>
-        <div class="w-4">:</div>
-        <div>${record.ProdukPembiayaan.name}</div>
-      </div>
-      <div class="flex gap-2">
-        <div class="w-32">Gaji Pensiun</div>
-        <div class="w-4">:</div>
-        <div>${IDRFormat(record.Debitur.salary)}</div>
-      </div>
+      ${ListNonStyle([
+        { key: "Nama Pemohon", value: record.Debitur.fullname },
+        { key: "Nomor Pensiun", value: record.nopen },
+        {
+          key: "Tempat Tangal Lahir",
+          value: `${record.Debitur.birthplace}, ${moment(record.Debitur.birthdate).format("DD-MM-YYYY")}`,
+        },
+        { key: "Jenis Pembiayaan", value: record.JenisPembiayaan.name },
+        { key: "Produk Pembiayaan", value: record.ProdukPembiayaan.name },
+        {
+          key: "Gaji Pensiun",
+          value: IDRFormat(record.Debitur.salary),
+          currency: true,
+        },
+      ])}
+      
     </div>
     <div class="flex-1">
-      <div class="flex gap-2">
-        <div class="w-32">Tanggal Akad</div>
-        <div class="w-4">:</div>
-        <div>${moment(record.date_contract).format("DD/MM/YYYY")}</div>
-      </div>
-      <div class="flex gap-2">
-        <div class="w-32">Usia Pemohon</div>
-        <div class="w-4">:</div>
-        <div>${age.year} Tahun ${age.month} Bulan ${age.day} Hari</div>
-      </div>
-      <div class="flex gap-2">
-        <div class="w-32">Est Tanggal Lunas</div>
-        <div class="w-4">:</div>
-        <div>${moment(record.date_contract).add(record.tenor, "month").format("DD/MM/YYYY")}</div>
-      </div>
-      <div class="flex gap-2">
-        <div class="w-32">Est Usia Lunas</div>
-        <div class="w-4">:</div>
-        <div>${ageLunas.year} Tahun ${ageLunas.month} Bulan ${ageLunas.day} Hari</div>
-      </div>
-      <div class="flex gap-2">
-        <div class="w-32">Plafond</div>
-        <div class="w-4">:</div>
-        <div>${IDRFormat(record.plafond)}</div>
-      </div>
-      <div class="flex gap-2">
-        <div class="w-32">Jangka Waktu</div>
-        <div class="w-4">:</div>
-        <div>${record.tenor} Bulan</div>
-      </div>
+    ${ListNonStyle([
+      {
+        key: "Tanggal Akad",
+        value: moment(record.date_contract).format("DD-MM-YYYY"),
+      },
+      {
+        key: "Usia Pemohon",
+        value: `${age.year} Tahun ${age.month} Bulan ${age.day} Hari`,
+      },
+      {
+        key: "Est Tanggal Lunas",
+        value: moment(record.date_contract)
+          .add(record.tenor, "month")
+          .format("DD/MM/YYYY"),
+      },
+      { key: "Plafond", value: IDRFormat(record.plafond), currency: true },
+      {
+        key: "Jangka Waktu",
+        value: `${record.tenor} Bulan`,
+      },
+    ])}
     </div>
   </div>
 
   <div class="my-4 flex gap-4">
     <div class="flex-1">
-      <div class="flex gap-2">
-        <div class="w-32">Suku Bunga</div>
-        <div class="w-4">:</div>
-        <div>${(record.c_margin + record.c_margin_sumdan).toFixed(2)}% /Tahun</div>
-      </div>
-      <div class="flex gap-2">
-        <div class="w-32">Angsuran Perbulan</div>
-        <div class="w-4">:</div>
-        <div>${IDRFormat(angsuran)}</div>
-      </div>
-      <div class="flex gap-2">
-        <div class="w-32">Sisa Gaji</div>
-        <div class="w-4">:</div>
-        <div>${IDRFormat(record.Debitur.salary - angsuran)}</div>
-      </div>
-      <div class="flex gap-2">
-        <div class="w-32">Debt Service Ratio</div>
-        <div class="w-4">:</div>
-        <div>${((angsuran / record.Debitur.salary) * 100).toFixed(2)}% / ${record.ProdukPembiayaan.Sumdan.dsr.toFixed(2)}%</div>
-      </div>
+      ${ListNonStyle([
+        {
+          key: "Suku Bunga",
+          value: `${(record.c_margin + record.c_margin_sumdan).toFixed(2)}% /Tahun`,
+        },
+        {
+          key: "Angsuran Perbulan",
+          value: IDRFormat(angsuran),
+          currency: true,
+        },
+        {
+          key: "Sisa Gaji",
+          value: IDRFormat(record.Debitur.salary - angsuran),
+          currency: true,
+        },
+        {
+          key: "Debt Service Ratio",
+          value: `${((angsuran / record.Debitur.salary) * 100).toFixed(2)}% / ${record.ProdukPembiayaan.Sumdan.dsr.toFixed(2)}%`,
+        },
+      ])}
     </div>
     <div class="flex-1">
-      <div class="flex gap-2">
-        <div class="w-32">Petugas</div>
-        <div class="w-4">:</div>
-        <div>${record.AO.fullname} (${record.AO.nip})</div>
-      </div>
-      <div class="flex gap-2">
-        <div class="w-32">Unit Pelayanan</div>
-        <div class="w-4">:</div>
-        <div>${record.AO.Cabang.name} - ${record.AO.Cabang.Area.name}</div>
-      </div>
+    ${ListNonStyle([
+      {
+        key: "SPV/MOC/KORWIL",
+        value: `${record.AO.fullname} (${record.AO.nip})`,
+      },
+      {
+        key: "Unit Pelayanan",
+        value: `${record.AO.Cabang.name} - ${record.AO.Cabang.Area.name}`,
+      },
+      { key: "Admin", value: record.CreatedBy.fullname },
+    ])}
     </div>
   </div>
   
@@ -151,64 +132,85 @@ export const AnalisaPerhitungan = (record: IDapem) => {
     <p class="font-bold text-lg mb-2">Rincian Pembiayaan :</p>
     <div class="flex gap-4 items-end">
       <div class="flex-1">
-        <div class="flex gap-4">
-          <div class="w-52">Biaya Administrasi</div>
-          <div class="w-4">:</div>
-          <div class="flex-1 text-right">${IDRFormat(biayaAdm)}</div>
-        </div>
-        <div class="flex gap-4">
-          <div class="w-52">Biaya Asuransi</div>
-          <div class="w-4">:</div>
-          <div class="flex-1 text-right">${IDRFormat(biayaAsuransi)}</div>
-        </div>
-        <div class="flex gap-4">
-          <div class="w-52">Biaya Tatalaksana</div>
-          <div class="w-4">:</div>
-          <div class="flex-1 text-right">${IDRFormat(record.c_gov)}</div>
-        </div>
-        <div class="flex gap-4">
-          <div class="w-52">Biaya Materai</div>
-          <div class="w-4">:</div>
-          <div class="flex-1 text-right">${IDRFormat(record.c_stamp)}</div>
-        </div>
-        <div class="flex gap-4">
-          <div class="w-52">Biaya Buka Rekening</div>
-          <div class="w-4">:</div>
-          <div class="flex-1 text-right">${IDRFormat(record.c_account)}</div>
-        </div>
-        <div class="flex gap-4">
-          <div class="w-52">Biaya Mutasi</div>
-          <div class="w-4">:</div>
-          <div class="flex-1 text-right">${IDRFormat(record.c_mutasi)}</div>
-        </div>
-        <div class="flex gap-4 text-red-500 border-t font-bold">
-          <div class="w-52">TOTAL BIAYA</div>
-          <div class="w-4">:</div>
-          <div class="flex-1 text-right">${IDRFormat(biayaTotal)}</div>
-        </div>
+        ${ListNonStyle([
+          {
+            key: "Biaya Administrasi",
+            value: IDRFormat(biayaAdm),
+            currency: true,
+          },
+          {
+            key: "Biaya Asuransi",
+            value: IDRFormat(biayaAsuransi),
+            currency: true,
+          },
+          {
+            key: "Biaya Tatalaksana",
+            value: IDRFormat(record.c_gov),
+            currency: true,
+          },
+          {
+            key: "Biaya Bula Rekening",
+            value: IDRFormat(record.c_account),
+            currency: true,
+          },
+          {
+            key: "Biaya Provisi",
+            value: IDRFormat(record.c_provisi),
+            currency: true,
+          },
+          {
+            key: "Biaya Flagging",
+            value: IDRFormat(record.c_infomation),
+            currency: true,
+          },
+          {
+            key: "Biaya Materai",
+            value: IDRFormat(record.c_stamp),
+            currency: true,
+          },
+          {
+            key: "Biaya Mutasi",
+            value: IDRFormat(record.c_mutasi),
+            currency: true,
+          },
+          {
+            key: "Total Biaya",
+            value: IDRFormat(GetDapem(record).biaya),
+            currency: true,
+            classStyle: "border-t border-dashed font-bold",
+          },
+        ])}
       </div>
 
-      <div class="flex-1 font-bold">
-        <div class="flex gap-4 text-blue-500">
-          <div class="w-52">Terima Kotor</div>
-          <div class="w-4">:</div>
-          <div class="flex-1 text-right">${IDRFormat(record.plafond - biayaTotal)}</div>
-        </div>
-        <div class="flex gap-4 text-red-500">
-          <div class="w-52">Nominal Takeover</div>
-          <div class="w-4">:</div>
-          <div class="flex-1 text-right">${IDRFormat(record.c_takeover)}</div>
-        </div>
-        <div class="flex gap-4 text-red-500">
-          <div class="w-52">Blokir Angsuran ${record.c_blokir}x</div>
-          <div class="w-4">:</div>
-          <div class="flex-1 text-right">${IDRFormat(blokir)}</div>
-        </div>
-        <div class="flex gap-4 text-green-500 border-t font-bold">
-          <div class="w-52">TERIMA BERSIH</div>
-          <div class="w-4">:</div>
-          <div class="flex-1 text-right">${IDRFormat(record.plafond - (biayaTotal + record.c_takeover + blokir))}</div>
-        </div>
+      <div class="flex-1 ">
+      ${ListNonStyle([
+        {
+          key: "Terima Kotor",
+          value: IDRFormat(record.plafond - GetDapem(record).biaya),
+          currency: true,
+        },
+        {
+          key: "Blokir Angsuran",
+          value: IDRFormat(blokir),
+          currency: true,
+        },
+        {
+          key: "BPP",
+          value: IDRFormat(record.c_bpp),
+          currency: true,
+        },
+        {
+          key: "Nominal Takeover",
+          value: IDRFormat(record.c_takeover),
+          currency: true,
+        },
+        {
+          key: "Terima Bersih",
+          value: IDRFormat(GetDapem(record).tb),
+          currency: true,
+          classStyle: "border-t border-dashed font-bold",
+        },
+      ])}
       </div>
     </div>
   </div>
@@ -217,7 +219,7 @@ export const AnalisaPerhitungan = (record: IDapem) => {
     <p>Informasi Lainnya : </p>
     <ul style="list-style-type: disc;">
       ${record.JenisPembiayaan.status_takeover ? `<li>Instansi takeover ke <span class="font-bold">${record.takeover_from}</span> dengan estimasi pelaksanaan tanggal <span class="font-bold">${moment(record.takeover_date).format("DD MMMM YYYY")}</span></li>` : ""}
-      ${record.JenisPembiayaan.c_mutasi ? `<li>Akan dilakukan mutasi kantor bayar gaji pensiun dari <span class="font-bold">${record.mutasi_from} ke ${record.mutasi_to}</span>` : ""}
+      ${record.JenisPembiayaan.status_mutasi ? `<li>Akan dilakukan mutasi kantor bayar gaji pensiun dari <span class="font-bold">${record.mutasi_from} ke ${record.mutasi_to}</span>` : ""}
     </ul>
   </div>
 `;

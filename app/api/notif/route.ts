@@ -91,7 +91,7 @@ export const GET = async (req: NextRequest) => {
         where: {
           status: false,
           ...(user.sumdanId && {
-            ProdukPembiayaan: { sumdanId: user.sumdanId },
+            sumdanId: user.sumdanId,
           }),
         },
       }),
@@ -109,7 +109,7 @@ export const GET = async (req: NextRequest) => {
         where: {
           status: "DELIVERY",
           ...(user.sumdanId && {
-            ProdukPembiayaan: { sumdanId: user.sumdanId },
+            sumdanId: user.sumdanId,
           }),
         },
       }),
@@ -127,7 +127,7 @@ export const GET = async (req: NextRequest) => {
         where: {
           status: "DELIVERY",
           ...(user.sumdanId && {
-            ProdukPembiayaan: { sumdanId: user.sumdanId },
+            sumdanId: user.sumdanId,
           }),
         },
       }),

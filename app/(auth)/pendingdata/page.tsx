@@ -1,31 +1,43 @@
 "use client";
 
+import { FormInput, ViewFiles } from "@/components";
+import { printContract } from "@/components/pdfutils/akad/Akad";
+import { printForm } from "@/components/pdfutils/etc/printForm";
+import { printMonitoring } from "@/components/pdfutils/etc/printMonitoring";
 import { useUser } from "@/components/UserContext";
 import {
   ExportToExcel,
   FilterData,
+  GetDroppingStatusTag,
   GetStatusTag,
-  MappingToProsesDapem,
-  ProsesPembiayaan,
+  MappingToExcelDapem,
 } from "@/components/utils/CompUtils";
 import { DetailDapem } from "@/components/utils/LayoutUtils";
-import { GetAngsuran, IDRFormat } from "@/components/utils/PembiayaanUtil";
+import {
+  GetAngsuran,
+  GetRoman,
+  IDRFormat,
+} from "@/components/utils/PembiayaanUtil";
 import {
   IActionTable,
   IDapem,
   IDesc,
   IPageProps,
-  IUser,
+  IViewFiles,
 } from "@/libs/IInterfaces";
 import { useAccess } from "@/libs/Permission";
 
 import {
   ArrowRightOutlined,
-  FileProtectOutlined,
+  CheckCircleOutlined,
+  DeleteOutlined,
+  EditOutlined,
+  FileFilled,
   FolderOutlined,
-  FormOutlined,
   PayCircleOutlined,
   PrinterOutlined,
+  ReadOutlined,
+  RobotOutlined,
   SwapOutlined,
 } from "@ant-design/icons";
 import { JenisPembiayaan, Sumdan } from "@prisma/client";
@@ -33,8 +45,8 @@ import {
   App,
   Button,
   Card,
-  DatePicker,
   Input,
+  Modal,
   Select,
   Table,
   TableProps,
@@ -42,10 +54,15 @@ import {
   Tooltip,
   Typography,
 } from "antd";
+import { HookAPI } from "antd/es/modal/useModal";
 import moment from "moment";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 const { Paragraph } = Typography;
-const { RangePicker } = DatePicker;
+
+interface IActionTableAkad<T> extends IActionTable<T> {
+  cetakAkad: boolean;
+}
 
 export default function Page() {
   const [pageProps, setPageProps] = useState<IPageProps<IDapem>>({
@@ -56,34 +73,36 @@ export default function Page() {
     search: "",
     sumdanId: "",
     jenisPembiayaanId: "",
-    approv_status: "",
-    backdate: "",
   });
   const [loading, setLoading] = useState(false);
-  const [selected, setSelected] = useState<IActionTable<IDapem>>({
+  const [selected, setSelected] = useState<IActionTableAkad<IDapem>>({
     upsert: false,
     delete: false,
     proses: false,
     selected: undefined,
+    cetakAkad: false,
   });
   const [sumdans, setSumdans] = useState<Sumdan[]>([]);
   const [jeniss, setJeniss] = useState<JenisPembiayaan[]>([]);
   const { modal } = App.useApp();
-  const { hasAccess } = useAccess("/proses/approv");
+  const { hasAccess } = useAccess("/monitoring");
   const user = useUser();
+  const [views, setViews] = useState<IViewFiles>({
+    open: false,
+    data: [],
+  });
 
   const getData = async () => {
     setLoading(true);
     const params = new URLSearchParams();
     params.append("page", pageProps.page.toString());
     params.append("limit", pageProps.limit.toString());
-    params.append("approv_status", pageProps.approv_status || "all");
-
+    params.append("dropping_status", "PENDING");
     if (pageProps.search) params.append("search", pageProps.search);
+
     if (pageProps.sumdanId) params.append("sumdanId", pageProps.sumdanId);
     if (pageProps.jenisPembiayaanId)
       params.append("jenisPembiayaanId", pageProps.jenisPembiayaanId);
-    if (pageProps.backdate) params.append("backdate", pageProps.backdate);
 
     const res = await fetch(`/api/dapem?${params.toString()}`);
     const json = await res.json();
@@ -105,9 +124,7 @@ export default function Page() {
     pageProps.limit,
     pageProps.search,
     pageProps.sumdanId,
-    pageProps.approv_status,
     pageProps.jenisPembiayaanId,
-    pageProps.backdate,
   ]);
 
   useEffect(() => {
@@ -320,6 +337,81 @@ export default function Page() {
       },
     },
     {
+      title: "Status Dropping",
+      dataIndex: "dropping_status",
+      key: "dropping_status",
+      width: 180,
+      render: (_, record, i) => {
+        return (
+          <div className="flex gap-1">
+            {GetDroppingStatusTag(record.dropping_status)}
+            {record.Dropping && record.Dropping.process_at && (
+              <div className="text-xs">
+                {moment(record.Dropping.process_at).format("DD/MM/YYYY HH:mm")}
+              </div>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      title: "Berkas Akad",
+      dataIndex: "akad",
+      key: "akad",
+      render(value, record, index) {
+        return (
+          <div>
+            <div className="flex gap-2">
+              <Button
+                icon={<FileFilled />}
+                size="small"
+                disabled={!record.file_contract}
+                onClick={() =>
+                  setViews({
+                    open: true,
+                    data: [
+                      { name: "Berkas Akad", url: record.file_contract || "" },
+                    ],
+                  })
+                }
+              ></Button>
+              {hasAccess("update") && (
+                <Button
+                  icon={<PrinterOutlined />}
+                  type="primary"
+                  size="small"
+                  onClick={() =>
+                    setSelected({
+                      ...selected,
+                      selected: record,
+                      cetakAkad: true,
+                    })
+                  }
+                ></Button>
+              )}
+            </div>
+          </div>
+        );
+      },
+    },
+    {
+      title: "Nomor Akad",
+      dataIndex: "dataakad",
+      key: "dataakad",
+      render(value, record, index) {
+        return (
+          <div>
+            {record.no_contract && <div>{record.no_contract}</div>}
+            {record.date_contract && (
+              <div className="text-xs opacity-80">
+                {moment(record.date_contract).format("DD/MM/YYYY")}
+              </div>
+            )}
+          </div>
+        );
+      },
+    },
+    {
       title: "Mutasi & Takeover",
       dataIndex: "produk",
       key: "produk",
@@ -372,7 +464,51 @@ export default function Page() {
       key: "action",
       width: 100,
       render: (_, record) => (
-        <div className="flex gap-2">
+        <div className="flex gap-1 flex-wrap justify-center">
+          {hasAccess("write") && (
+            <Button
+              icon={<PrinterOutlined />}
+              type="primary"
+              size="small"
+              onClick={() => printForm(record)}
+            ></Button>
+          )}
+          {hasAccess("update") && (
+            <Link href={`/monitoring/upsert/${record.id}`}>
+              <Button
+                icon={<EditOutlined />}
+                size="small"
+                type="primary"
+              ></Button>
+            </Link>
+          )}
+          {hasAccess("update") &&
+            ["DRAFT", "CANCEL"].includes(record.dropping_status) && (
+              <Tooltip title={"Ajukan permohonan ini? (Naikan ke verifikasi)"}>
+                <Button
+                  icon={<CheckCircleOutlined />}
+                  size="small"
+                  type="primary"
+                  onClick={() =>
+                    setSelected({ ...selected, proses: true, selected: record })
+                  }
+                ></Button>
+              </Tooltip>
+            )}
+          {hasAccess("delete") && (
+            <Button
+              icon={<DeleteOutlined />}
+              size="small"
+              type="primary"
+              danger
+              onClick={() =>
+                setSelected({ ...selected, delete: true, selected: record })
+              }
+              disabled={["APPROVED", "PAID_OFF"].includes(
+                record.dropping_status,
+              )}
+            ></Button>
+          )}
           <Tooltip
             title={`Detail Data ${record.Debitur.fullname} (${record.nopen})`}
           >
@@ -385,16 +521,6 @@ export default function Page() {
               }
             ></Button>
           </Tooltip>
-          {hasAccess("proses") && record.approv_status === "PENDING" && (
-            <Button
-              size="small"
-              type="primary"
-              icon={<FormOutlined />}
-              onClick={() =>
-                setSelected({ ...selected, proses: true, selected: record })
-              }
-            ></Button>
-          )}
         </div>
       ),
     },
@@ -404,7 +530,7 @@ export default function Page() {
     <Card
       title={
         <div className="flex gap-2 font-bold text-xl">
-          <FileProtectOutlined /> Approval Pembiayaan
+          <ReadOutlined /> Monitoring Pembiayaan
         </div>
       }
       styles={{ body: { padding: 5 } }}
@@ -414,16 +540,6 @@ export default function Page() {
           <FilterData
             children={
               <>
-                <div className="my-2">
-                  <p>Periode :</p>
-                  <RangePicker
-                    size="small"
-                    onChange={(date, dateStr) =>
-                      setPageProps({ ...pageProps, backdate: dateStr })
-                    }
-                    style={{ width: "100%" }}
-                  />
-                </div>
                 {user && !user.sumdanId && (
                   <div className="my-2">
                     <p>Mitra pembiayaan :</p>
@@ -458,28 +574,11 @@ export default function Page() {
                     style={{ width: "100%" }}
                   />
                 </div>
-                <div className="my-2">
-                  <p>Status pembiayaan</p>
-                  <Select
-                    size="small"
-                    placeholder="Pilih Status..."
-                    options={[
-                      { label: "PENDING", value: "PENDING" },
-                      { label: "APPROVED", value: "APPROVED" },
-                      { label: "REJECTED", value: "REJECTED" },
-                    ]}
-                    onChange={(e) =>
-                      setPageProps({ ...pageProps, approv_status: e })
-                    }
-                    allowClear
-                    style={{ width: "100%" }}
-                  />
-                </div>
               </>
             }
           />
         </div>
-        <div className="flex gap-2 items-center">
+        <div className="flex gap-2">
           <Button
             icon={<PrinterOutlined />}
             size="small"
@@ -489,39 +588,35 @@ export default function Page() {
                 [
                   {
                     sheetname: "alldata",
-                    data: MappingToProsesDapem(pageProps.data),
-                  },
-                  {
-                    sheetname: "antri",
-                    data: MappingToProsesDapem(
-                      pageProps.data.filter(
-                        (d) => d.approv_status === "PENDING",
-                      ),
-                    ),
-                  },
-                  {
-                    sheetname: "setuju",
-                    data: MappingToProsesDapem(
-                      pageProps.data.filter(
-                        (d) => d.approv_status === "APPROVED",
-                      ),
-                    ),
-                  },
-                  {
-                    sheetname: "tolak",
-                    data: MappingToProsesDapem(
-                      pageProps.data.filter(
-                        (d) => d.approv_status === "REJECTED",
-                      ),
-                    ),
+                    data: MappingToExcelDapem(pageProps.data),
                   },
                 ],
-                "proses_permohonan",
+                "pendingdata",
               )
             }
           >
             Excel
           </Button>
+          <Button
+            icon={<PrinterOutlined />}
+            size="small"
+            type="primary"
+            onClick={() =>
+              printMonitoring(pageProps.data, sumdans, pageProps.backdate)
+            }
+          >
+            PDF
+          </Button>
+          {hasAccess("write") && (
+            <Button
+              icon={<PrinterOutlined />}
+              type="primary"
+              size="small"
+              onClick={() => printForm()}
+            >
+              Form
+            </Button>
+          )}
           <Input.Search
             size="small"
             style={{ width: 170 }}
@@ -604,6 +699,43 @@ export default function Page() {
           );
         }}
       />
+
+      {selected.selected && selected.proses && (
+        <SendSubmission
+          data={selected.selected}
+          open={selected.proses}
+          setOpen={(val: boolean) =>
+            setSelected({ ...selected, proses: val, selected: undefined })
+          }
+          getData={getData}
+          hook={modal}
+          key={"send" + selected.selected.id}
+        />
+      )}
+      {selected.selected && selected.delete && (
+        <DeleteSubmission
+          open={selected.delete}
+          setOpen={(val: boolean) =>
+            setSelected({ ...selected, selected: undefined, delete: val })
+          }
+          getData={getData}
+          data={selected.selected}
+          hook={modal}
+          key={"delete" + selected.selected.id}
+        />
+      )}
+      {selected.selected && selected.cetakAkad && (
+        <PrintContractSubmission
+          open={selected.cetakAkad}
+          setOpen={(val: boolean) =>
+            setSelected({ ...selected, selected: undefined, cetakAkad: val })
+          }
+          getData={getData}
+          data={selected.selected}
+          hook={modal}
+          key={"contract" + selected.selected.id}
+        />
+      )}
       {selected.selected && selected.upsert && (
         <DetailDapem
           open={selected.upsert}
@@ -612,21 +744,276 @@ export default function Page() {
           }
           data={selected.selected}
           key={"detail" + selected.selected.id}
+          allowprogres
         />
       )}
-      {selected.selected && selected.proses && (
-        <ProsesPembiayaan
-          data={selected.selected}
-          open={selected.proses}
-          setOpen={(e: boolean) => setSelected({ ...selected, proses: e })}
-          hook={modal}
-          user={user as IUser}
-          getData={getData}
-          name="approv"
-          nextname="dropping_status"
-          nextnameValue="PROCCESS"
-        />
-      )}
+      <ViewFiles
+        setOpen={(v: boolean) => setViews({ ...views, open: v })}
+        data={{ ...views }}
+      />
     </Card>
   );
 }
+
+const SendSubmission = ({
+  data,
+  open,
+  setOpen,
+  getData,
+  hook,
+}: {
+  data: IDapem;
+  open: boolean;
+  setOpen: Function;
+  getData: Function;
+  hook: HookAPI;
+}) => {
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async () => {
+    setLoading(true);
+    await fetch("/api/dapem?id=" + data.id, {
+      method: "PUT",
+      body: JSON.stringify({
+        ...data,
+        verif_status: "PENDING",
+        dropping_status: "PENDING",
+      }),
+    })
+      .then((res) => res.json())
+      .then(async (res) => {
+        if (res.status === 200) {
+          setOpen(false);
+          await getData();
+        } else {
+          hook.error({ title: "ERROR!!", content: res.msg });
+        }
+      });
+    setLoading(false);
+  };
+
+  return (
+    <Modal
+      open={open}
+      onCancel={() => setOpen(false)}
+      title="Konfirmasi Permohonan"
+      loading={loading}
+      onOk={handleSubmit}
+    >
+      <div className="my-4">
+        <p>
+          Ajukan permohonan ini ke verifikasi{" "}
+          <span className="font-bold">*{data.id}*</span>?
+        </p>
+        <p className="italic text-xs text-blue-500 mt-4">
+          Mohon cek kembali data yang telah diinput, pastikan sudah lengkap dan
+          siap di verifikasi!
+        </p>
+      </div>
+    </Modal>
+  );
+};
+
+const DeleteSubmission = ({
+  data,
+  open,
+  setOpen,
+  getData,
+  hook,
+}: {
+  data: IDapem;
+  open: boolean;
+  setOpen: Function;
+  getData: Function;
+  hook: HookAPI;
+}) => {
+  const [loading, setLoading] = useState(false);
+
+  const handleDelete = async () => {
+    setLoading(true);
+    await fetch("/api/dapem?id=" + data.id, { method: "DELETE" })
+      .then((res) => res.json())
+      .then(async (res) => {
+        const { msg, status } = res;
+        if (status === 200) {
+          await getData();
+          setOpen(false);
+        } else {
+          hook.error({ content: msg });
+        }
+      })
+      .catch((err) => {
+        console.log(err);
+        hook.error({
+          content: `Internal Server Error!!. Hapus data permohonan kredit ${data.id}) gagal`,
+        });
+      });
+    setLoading(false);
+  };
+
+  const handleCancel = async () => {
+    setLoading(true);
+    await fetch("/api/dapem?id=" + data.id, {
+      method: "PUT",
+      body: JSON.stringify({ ...data, dropping_status: "CANCEL" }),
+    })
+      .then((res) => res.json())
+      .then(async (res) => {
+        if (res.status === 200) {
+          setOpen(false);
+          await getData();
+        } else {
+          hook.error({ title: "ERROR!!", content: res.msg });
+        }
+      });
+    setLoading(false);
+  };
+  return (
+    <Modal
+      open={open}
+      onCancel={() => setOpen(false)}
+      title="Konfirmasi Hapus Permohonan"
+      loading={loading}
+      footer={[]}
+    >
+      <div className="my-4">
+        <p>
+          Hapus Data Pembiayaan ini{" "}
+          <span className="font-bold">*{data.id}*</span>?
+        </p>
+        <div className="mt-4 text-xs italic text-blue-500">
+          <p>Hapus : Hapus dari monitoring!</p>
+          <p>Batalkan : Update status menjadi CANCEL!</p>
+        </div>
+      </div>
+      <div className="flex justify-end gap-2">
+        <Button danger onClick={() => handleDelete()}>
+          Hapus Pengajuan
+        </Button>
+        <Button danger onClick={() => handleCancel()}>
+          Batalkan Pengajuan
+        </Button>
+        <Button onClick={() => setOpen(false)}>Tutup</Button>
+      </div>
+    </Modal>
+  );
+};
+
+const PrintContractSubmission = ({
+  open,
+  setOpen,
+  data,
+  getData,
+  hook,
+}: {
+  open: boolean;
+  setOpen: Function;
+  data: IDapem;
+  getData: Function;
+  hook: HookAPI;
+}) => {
+  const [temp, setTemp] = useState<IDapem>(data);
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async () => {
+    setLoading(true);
+    await fetch("/api/akad", {
+      method: "POST",
+      body: JSON.stringify({
+        id: data.id,
+        date_contract: temp.date_contract,
+        no_contract: temp.no_contract,
+      }),
+    })
+      .then((res) => res.json())
+      .then(async (res) => {
+        const { msg, status, data } = res;
+        if (status === 200) {
+          await getData();
+          printContract({ ...temp, Angsuran: data } as IDapem);
+        } else {
+          hook.error({ content: msg });
+        }
+      })
+      .catch((err) => {
+        console.log(err);
+        hook.error({ content: `Internal Server Error!!. Generate PK gagal` });
+      });
+    setLoading(false);
+  };
+
+  return (
+    <Modal
+      open={open}
+      onCancel={() => setOpen(false)}
+      title={"Cetak Akad " + data.id}
+      loading={loading}
+      onOk={handleSubmit}
+      okButtonProps={{
+        disabled: !temp.date_contract || !temp.no_contract,
+      }}
+    >
+      <div className="flex flex-col gap-2">
+        <FormInput
+          data={{
+            label: "Pemohon",
+            type: "text",
+            required: true,
+            value: `${data.Debitur.fullname} (${data.nopen})`,
+            disabled: true,
+          }}
+        />
+        <FormInput
+          data={{
+            label: "Tanggal Akad",
+            type: "date",
+            required: true,
+            value: moment(temp.date_contract).format("YYYY-MM-DD"),
+            onChange: (e: string) =>
+              setTemp({ ...temp, date_contract: new Date(e) }),
+          }}
+        />
+        <FormInput
+          data={{
+            label: "Nomor Akad",
+            type: "text",
+            required: true,
+            value: temp.no_contract,
+            onChange: (e: string) => setTemp({ ...temp, no_contract: e }),
+            suffix: (
+              <Button
+                size="small"
+                icon={<RobotOutlined />}
+                type="primary"
+                onClick={() =>
+                  setTemp({
+                    ...temp,
+                    no_contract: `${data.id}/FAS-PKPP/${GetRoman(new Date(temp.date_contract || new Date()).getMonth() + 1)}/${moment(temp.date_contract || new Date()).format("YYYY")}`,
+                  })
+                }
+              ></Button>
+            ),
+          }}
+        />
+        <FormInput
+          data={{
+            label: "Jenis Margin",
+            type: "text",
+            required: true,
+            value: `${data.c_margin + data.c_margin_sumdan}% (${data.margin_type})`,
+            disabled: true,
+          }}
+        />
+        <FormInput
+          data={{
+            label: "Mitra",
+            type: "text",
+            required: true,
+            value: data.ProdukPembiayaan.Sumdan.name,
+            disabled: true,
+          }}
+        />
+      </div>
+    </Modal>
+  );
+};

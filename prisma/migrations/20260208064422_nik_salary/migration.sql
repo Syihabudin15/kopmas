@@ -1,3 +1,0 @@
--- AlterTable
-ALTER TABLE `user` ADD COLUMN `nik` VARCHAR(191) NULL,
-    ADD COLUMN `salary` INTEGER NOT NULL DEFAULT 0;

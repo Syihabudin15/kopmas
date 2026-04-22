@@ -158,7 +158,7 @@ const generateSD = (record: IDocument) => {
 export const printSDStandar = (record: IDocument) => {
   const htmlContent = generateSD(record);
 
-  const w = window.open("", "_blank", "width=900,height=1000");
+  const w = window.open("", "_blank");
   if (!w) {
     alert("Popup diblokir. Mohon izinkan popup dari situs ini.");
     return;

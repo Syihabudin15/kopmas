@@ -1,4 +1,8 @@
-import { GetAngsuran, IDRFormat } from "@/components/utils/PembiayaanUtil";
+import {
+  GetAngsuran,
+  GetDapem,
+  IDRFormat,
+} from "@/components/utils/PembiayaanUtil";
 import { IDapem } from "@/libs/IInterfaces";
 import moment from "moment";
 import { Header, ListNonStyle } from "../utils";
@@ -13,14 +17,10 @@ export const BuktiPencairan = (record: IDapem, isFor: string) => {
   ).angsuran;
   const admin = record.plafond * ((record.c_adm_sumdan + record.c_adm) / 100);
   const asuransi = record.plafond * (record.c_insurance / 100);
+  const provisi = record.plafond * (record.c_provisi / 100);
   const blokir = angsuran * record.c_blokir;
-  const biaya =
-    admin +
-    asuransi +
-    record.c_gov +
-    record.c_account +
-    record.c_stamp +
-    record.c_mutasi;
+  const retensi = angsuran * record.c_retensi;
+  const dapem = GetDapem(record);
 
   return `
   ${Header("BUKTI PENCAIRAN PEMBIAYAAN", isFor, record.no_contract, process.env.NEXT_PUBLIC_APP_LOGO, record.ProdukPembiayaan.Sumdan.logo)}
@@ -64,13 +64,17 @@ export const BuktiPencairan = (record: IDapem, isFor: string) => {
   </div>
   <div class="mt-5 mb-5">
     ${ListNonStyle([
-      { key: "Plafond Pembiayaan", value: IDRFormat(record.plafond) },
+      {
+        key: "Plafond Pembiayaan",
+        value: IDRFormat(record.plafond),
+        currency: true,
+      },
       { key: "Jangka Waktu/Tenor", value: `${record.tenor} Bulan` },
       {
         key: "Bunga",
         value: `${(record.c_margin + record.c_margin_sumdan).toFixed(2)}% /Tahun`,
       },
-      { key: "Angsuran", value: IDRFormat(angsuran) },
+      { key: "Angsuran", value: IDRFormat(angsuran), currency: true },
     ])}
   </div>
 
@@ -79,16 +83,48 @@ export const BuktiPencairan = (record: IDapem, isFor: string) => {
     <div class="flex gap-10 items-end">
       <div class="flex-1">
         ${ListNonStyle([
-          { key: "Biaya Administrasi", value: IDRFormat(admin) },
-          { key: "Biaya Asuransi", value: IDRFormat(asuransi) },
-          { key: "Biaya Tatalaksana", value: IDRFormat(record.c_gov) },
-          { key: "Biaya Buka Rekening", value: IDRFormat(record.c_account) },
-          { key: "Biaya Materai", value: IDRFormat(record.c_stamp) },
-          { key: "Biaya Mutasi", value: IDRFormat(record.c_mutasi) },
+          {
+            key: "Biaya Administrasi",
+            value: IDRFormat(admin),
+            currency: true,
+          },
+          { key: "Biaya Asuransi", value: IDRFormat(asuransi), currency: true },
+          {
+            key: "Biaya Provisi",
+            value: IDRFormat(provisi),
+            currency: true,
+          },
+          {
+            key: "Biaya Tatalaksana",
+            value: IDRFormat(record.c_gov),
+            currency: true,
+          },
+          {
+            key: "Biaya Buka Rekening",
+            value: IDRFormat(record.c_account),
+            currency: true,
+          },
+
+          {
+            key: "Biaya Flagging",
+            value: IDRFormat(record.c_infomation),
+            currency: true,
+          },
+          {
+            key: "Biaya Materai",
+            value: IDRFormat(record.c_stamp),
+            currency: true,
+          },
+          {
+            key: "Biaya Mutasi",
+            value: IDRFormat(record.c_mutasi),
+            currency: true,
+          },
           {
             key: "TOTAL BIAYA",
-            value: IDRFormat(biaya),
+            value: IDRFormat(dapem.biaya),
             classStyle: "font-bold text-red-500 border-t border-dashed",
+            currency: true,
           },
         ])}
       </div>
@@ -96,20 +132,35 @@ export const BuktiPencairan = (record: IDapem, isFor: string) => {
       ${ListNonStyle([
         {
           key: "Terima Kotor",
-          value: IDRFormat(record.plafond - biaya),
+          value: IDRFormat(record.plafond - dapem.biaya),
           classStyle: "font-bold",
+          currency: true,
         },
         {
           key: `Blokir Angsuran ${record.c_blokir}x`,
           value: IDRFormat(blokir),
+          currency: true,
         },
-        { key: "Nominal Takeover", value: IDRFormat(record.c_takeover) },
+        {
+          key: `Retensi Angsuran ${record.c_retensi}x`,
+          value: IDRFormat(retensi),
+          currency: true,
+        },
+        {
+          key: `Bpp`,
+          value: IDRFormat(record.c_bpp),
+          currency: true,
+        },
+        {
+          key: "Nominal Takeover",
+          value: IDRFormat(record.c_takeover),
+          currency: true,
+        },
         {
           key: "TERIMA BERSIH",
-          value: IDRFormat(
-            record.plafond - (biaya + blokir + record.c_takeover),
-          ),
+          value: IDRFormat(dapem.tb),
           classStyle: "font-bold text-green-500 border-t border-dashed",
+          currency: true,
         },
       ])}
       </div>

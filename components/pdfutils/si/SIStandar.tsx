@@ -94,12 +94,12 @@ const generateSI = (record: IDropping) => {
         <div class="flex gap-2 ml-3">
           <p class="w-44">Jumlah Plafond</p>
           <p class="w-4">:</p>
-          <p class="flex-1">${IDRFormat(record.Dapem.reduce((acc, curr) => acc + curr.plafond, 0))}</p>
+          <p class="flex-1">Rp. ${IDRFormat(record.Dapem.reduce((acc, curr) => acc + curr.plafond, 0))}</p>
         </div>
         <div class="mb-4 flex gap-2 ml-3">
           <p class="w-44">Jumlah Dropping</p>
           <p class="w-4">:</p>
-          <p class="flex-1">${IDRFormat(record.Dapem.reduce((acc, curr) => acc + curr.plafond - (curr.plafond * (curr.c_adm_sumdan / 100) + curr.c_account), 0))}</p>
+          <p class="flex-1">Rp. ${IDRFormat(record.Dapem.reduce((acc, curr) => acc + curr.plafond - (curr.plafond * (curr.c_adm_sumdan / 100) + curr.c_account), 0))}</p>
         </div>
 
         <p>Sehubungan dengan hal tersebut, kami menginstruksikan kepada ${record.Sumdan.name} untuk melakukan pencairan (dropping) dana sebesar tersebut di atas ke rekening berikut :</p>
@@ -219,7 +219,7 @@ const generateSI = (record: IDropping) => {
 export const printSIStandar = (record: IDropping) => {
   const htmlContent = generateSI(record);
 
-  const w = window.open("", "_blank", "width=900,height=1000");
+  const w = window.open("", "_blank");
   if (!w) {
     alert("Popup diblokir. Mohon izinkan popup dari situs ini.");
     return;

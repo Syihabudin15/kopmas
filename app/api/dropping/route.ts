@@ -134,7 +134,16 @@ export const PUT = async (req: NextRequest) => {
           Pelunasan,
           ...dpmData
         } = dpm;
-        await prisma.dapem.update({ where: { id: dpm.id }, data: dpmData });
+        await prisma.dapem.update({
+          where: { id: dpm.id },
+          data: {
+            ...dpmData,
+            takeover_status: JenisPembiayaan.status_takeover
+              ? "DRAFT"
+              : "APPROVED",
+            mutasi_status: JenisPembiayaan.status_mutasi ? "DRAFT" : "APPROVED",
+          },
+        });
       }
     });
     return NextResponse.json(

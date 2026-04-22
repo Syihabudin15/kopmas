@@ -2,6 +2,7 @@
 
 import {
   GetAngsuran,
+  GetDapem,
   GetRoman,
   IDRFormat,
 } from "@/components/utils/PembiayaanUtil";
@@ -30,21 +31,16 @@ export const MAUKStandar = ({ data }: { data: IDapem }) => {
     data.tenor,
     data.c_margin_sumdan,
     data.margin_type,
-    data.rounded,
+    data.rounded_sumdan,
   ).angsuran;
 
   const adm = data.plafond * (data.c_adm / 100);
   const admSumdan = data.plafond * (data.c_adm_sumdan / 100);
   const asuransi = data.plafond * (data.c_insurance / 100);
+  const provisi = data.plafond * (data.c_provisi / 100);
   const blokir = angs * data.c_blokir;
-  const biaya =
-    adm +
-    admSumdan +
-    asuransi +
-    data.c_gov +
-    data.c_account +
-    data.c_stamp +
-    data.c_mutasi;
+  const retensi = angs * data.c_retensi;
+  const dapem = GetDapem(data);
 
   return (
     <PDFViewer className="w-full h-full">
@@ -149,7 +145,7 @@ export const MAUKStandar = ({ data }: { data: IDapem }) => {
                 />
               </View>
             </View>
-            <View style={{ marginTop: 15, borderBottom: "1px solid #aaa" }}>
+            <View style={{ marginTop: 5, borderBottom: "1px solid #aaa" }}>
               <Text
                 style={{ fontSize: 10, fontWeight: "bold", marginBottom: 5 }}
               >
@@ -169,7 +165,7 @@ export const MAUKStandar = ({ data }: { data: IDapem }) => {
                 ]}
               />
             </View>
-            <View style={{ marginTop: 15 }}>
+            <View style={{ marginTop: 5 }}>
               <Text
                 style={{ fontSize: 10, fontWeight: "bold", marginBottom: 5 }}
               >
@@ -200,6 +196,7 @@ export const MAUKStandar = ({ data }: { data: IDapem }) => {
                       {
                         key: "Plafond",
                         value: `${IDRFormat(data.plafond)}`,
+                        currency: true,
                       },
                       {
                         key: "Jangka Waktu",
@@ -207,6 +204,10 @@ export const MAUKStandar = ({ data }: { data: IDapem }) => {
                       },
                       {
                         key: "Bunga",
+                        value: `${(data.c_margin_sumdan + data.c_margin).toFixed(2)}% /Tahun`,
+                      },
+                      {
+                        key: "Bunga Mitra",
                         value: `${data.c_margin_sumdan.toFixed(2)}% /Tahun`,
                       },
                     ]}
@@ -219,22 +220,27 @@ export const MAUKStandar = ({ data }: { data: IDapem }) => {
                       {
                         key: "Gaji Pensiun",
                         value: `${IDRFormat(data.Debitur.salary)}`,
+                        currency: true,
                       },
                       {
                         key: "Angsuran",
                         value: `${IDRFormat(angsSumdan)}`,
+                        currency: true,
                       },
                       {
                         key: "Fee Collection",
                         value: `${IDRFormat(angs - angsSumdan)}`,
+                        currency: true,
                       },
                       {
                         key: "Total Angsuran",
                         value: `${IDRFormat(angs)}`,
+                        currency: true,
                       },
                       {
                         key: "Sisa Gaji",
                         value: `${IDRFormat(data.Debitur.salary - angs)}`,
+                        currency: true,
                       },
                       {
                         key: "Debt Service Ratio",
@@ -245,7 +251,7 @@ export const MAUKStandar = ({ data }: { data: IDapem }) => {
                 </View>
               </View>
             </View>
-            <View style={{ marginTop: 15 }}>
+            <View style={{ marginTop: 5 }}>
               <Text
                 style={{ fontSize: 10, marginBottom: 5, fontWeight: "bold" }}
               >
@@ -266,34 +272,53 @@ export const MAUKStandar = ({ data }: { data: IDapem }) => {
                       {
                         key: "Biaya Adm BPR",
                         value: IDRFormat(admSumdan),
+                        currency: true,
                       },
                       {
                         key: "Biaya Adm Mitra",
                         value: IDRFormat(adm),
+                        currency: true,
                       },
                       {
                         key: "Biaya Asuransi",
                         value: IDRFormat(asuransi),
+                        currency: true,
+                      },
+                      {
+                        key: "Biaya Provisi",
+                        value: IDRFormat(provisi),
+                        currency: true,
                       },
                       {
                         key: "Biaya Tatalaksana",
                         value: IDRFormat(data.c_gov),
+                        currency: true,
                       },
                       {
                         key: "Biaya Buka Rekening",
                         value: IDRFormat(data.c_account),
+                        currency: true,
+                      },
+
+                      {
+                        key: "Biaya Flagging",
+                        value: IDRFormat(data.c_infomation),
+                        currency: true,
                       },
                       {
                         key: "Biaya Materai",
                         value: IDRFormat(data.c_stamp),
+                        currency: true,
                       },
                       {
                         key: "Biaya Mutasi",
                         value: IDRFormat(data.c_mutasi),
+                        currency: true,
                       },
                       {
                         key: "TOTAL BIAYA",
-                        value: IDRFormat(biaya),
+                        value: IDRFormat(dapem.biaya),
+                        currency: true,
                         style: {
                           fontWeight: "bold",
                           borderTop: "1px solid #aaa",
@@ -309,15 +334,27 @@ export const MAUKStandar = ({ data }: { data: IDapem }) => {
                     data={[
                       {
                         key: "Terima Kotor",
-                        value: `${IDRFormat(data.plafond - biaya)}`,
+                        value: `${IDRFormat(data.plafond - dapem.biaya)}`,
+                        currency: true,
                         style: {
                           borderBottom: "1px solid #aaa",
                           borderStyle: "dashed",
                         },
                       },
                       {
-                        key: `Blokir Angsuran ${data.c_blokir}x`,
-                        value: `${IDRFormat(blokir)}`,
+                        key: `Blokir Angsuran (${data.c_blokir}x)`,
+                        value: IDRFormat(blokir),
+                        currency: true,
+                      },
+                      {
+                        key: `Retensi Angsuran (${data.c_retensi}x)`,
+                        value: IDRFormat(retensi),
+                        currency: true,
+                      },
+                      {
+                        key: `Bpp`,
+                        value: `${IDRFormat(data.c_bpp)}`,
+                        currency: true,
                       },
                       {
                         key: "Nominal Takeover",
@@ -326,11 +363,13 @@ export const MAUKStandar = ({ data }: { data: IDapem }) => {
                           borderBottom: "1px solid #aaa",
                           borderStyle: "dashed",
                         },
+                        currency: true,
                       },
                       {
                         key: "TERIMA BERSIH",
-                        value: `${IDRFormat(data.plafond - (biaya + blokir + data.c_takeover))}`,
+                        value: `${IDRFormat(dapem.tb)}`,
                         style: { fontWeight: "bold" },
+                        currency: true,
                       },
                     ]}
                   />
@@ -339,7 +378,7 @@ export const MAUKStandar = ({ data }: { data: IDapem }) => {
             </View>
             <View
               style={{
-                marginTop: 20,
+                marginTop: 10,
                 display: "flex",
                 flexDirection: "row",
                 gap: 20,
@@ -347,21 +386,21 @@ export const MAUKStandar = ({ data }: { data: IDapem }) => {
             >
               <View style={{ flex: 1, textAlign: "center" }}>
                 <Text>Mengetahui</Text>
-                <View style={{ height: 70 }}></View>
+                <View style={{ height: 50 }}></View>
                 <Text style={{ borderTop: "1px solid #aaa" }}>
                   Admin Kredit
                 </Text>
               </View>
               <View style={{ flex: 1, textAlign: "center" }}>
                 <Text>Mengetahui</Text>
-                <View style={{ height: 70 }}></View>
+                <View style={{ height: 50 }}></View>
                 <Text style={{ borderTop: "1px solid #aaa" }}>
                   Analis Kredit
                 </Text>
               </View>
               <View style={{ flex: 1, textAlign: "center" }}>
                 <Text>Menyetujui</Text>
-                <View style={{ height: 70 }}></View>
+                <View style={{ height: 50 }}></View>
                 <Text style={{ borderTop: "1px solid #aaa" }}>
                   Komite Kredit
                 </Text>
@@ -369,7 +408,7 @@ export const MAUKStandar = ({ data }: { data: IDapem }) => {
             </View>
             <View
               style={{
-                marginTop: 15,
+                marginTop: 10,
                 fontStyle: "italic",
                 display: "flex",
                 flexDirection: "row",
@@ -380,14 +419,14 @@ export const MAUKStandar = ({ data }: { data: IDapem }) => {
               <View style={{ flex: 1 }}>
                 <ListUnorderMin
                   data={[
-                    ...(data.takeover_from
+                    ...(data.JenisPembiayaan.status_takeover
                       ? [
                           {
                             value: `Instansi takeover ${data.takeover_from} dengan estimasi pelaksanaan tanggal ${moment(data.takeover_date).format("DD MMMM YYYY")}`,
                           },
                         ]
                       : []),
-                    ...(data.mutasi_to
+                    ...(data.JenisPembiayaan.status_mutasi
                       ? [
                           {
                             value: `Akan dilakukan mutasi kantor bayar gaji pensiun dari ${data.mutasi_from} ke ${data.mutasi_to}`,

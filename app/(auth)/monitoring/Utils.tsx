@@ -4,8 +4,9 @@ import { FormInput } from "@/components";
 import { useUser } from "@/components/UserContext";
 import {
   GetAngsuran,
-  GetBiaya,
+  GetDapem,
   GetFullAge,
+  GetInsurance,
   GetMaxPlafond,
   GetMaxTenor,
   IDRFormat,
@@ -116,17 +117,25 @@ export default function UpsertPermohonan({ record }: { record?: IDapem }) {
       return { ...s, ProdukPembiayaan: prod };
     });
     setSumdanAv(newAv);
-    const maxTen = GetMaxTenor(data.ProdukPembiayaan.max_age, year, month);
-    const maxPlaf = parseInt(
+    const maxTenn = GetMaxTenor(data.ProdukPembiayaan.max_paid, year, month);
+    const maxTen =
+      parseInt(String(maxTenn)) > data.ProdukPembiayaan.max_tenor
+        ? data.ProdukPembiayaan.max_tenor
+        : parseInt(String(maxTenn));
+    const maxPlaff = parseInt(
       String(
         GetMaxPlafond(
           data.c_margin + data.c_margin_sumdan,
           data.tenor,
-          data.Debitur.salary *
-            ((data.ProdukPembiayaan?.Sumdan?.dsr ?? 95) / 100),
+          (data.Debitur.salary * (data.ProdukPembiayaan.Sumdan?.dsr || 0)) /
+            100,
         ),
       ),
     );
+    const maxPlaf =
+      maxPlaff > data.ProdukPembiayaan.max_plafond
+        ? data.ProdukPembiayaan.max_plafond
+        : maxPlaff;
 
     const angs = GetAngsuran(
       data.plafond,
@@ -139,6 +148,11 @@ export default function UpsertPermohonan({ record }: { record?: IDapem }) {
       ...prev,
       tenor: prev.tenor > maxTen ? maxTen : prev.tenor,
       plafond: prev.plafond > maxPlaf ? maxPlaf : prev.plafond,
+      c_insurance: GetInsurance(
+        data.Debitur.birthdate,
+        data.created_at,
+        prev.tenor > maxTen ? maxTen : prev.tenor,
+      ),
     }));
     setItemp({
       ...temp,
@@ -154,6 +168,7 @@ export default function UpsertPermohonan({ record }: { record?: IDapem }) {
     data.Debitur.salary,
     data.produkPembiayaanId,
     data.margin_type,
+    data.insurance_type,
     data.c_margin,
     data.c_margin_sumdan,
   ]);
@@ -168,7 +183,7 @@ export default function UpsertPermohonan({ record }: { record?: IDapem }) {
         }
         loading={loading}
       >
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-4 flex-wrap">
           <FormInput
             data={{
               mode: "vertical",
@@ -582,7 +597,7 @@ export default function UpsertPermohonan({ record }: { record?: IDapem }) {
         style={{ marginTop: 5 }}
         loading={loading}
       >
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-4 flex-wrap">
           <FormInput
             data={{
               mode: "vertical",
@@ -673,7 +688,7 @@ export default function UpsertPermohonan({ record }: { record?: IDapem }) {
         style={{ marginTop: 5 }}
         loading={loading}
       >
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-4 flex-wrap">
           <FormInput
             data={{
               mode: "vertical",
@@ -682,8 +697,8 @@ export default function UpsertPermohonan({ record }: { record?: IDapem }) {
               class: "flex-1",
               required: true,
               options: [
-                { label: "KAWIN", value: "KAWIN" },
                 { label: "BELUM KAWIN", value: "BELUM_KAWIN" },
+                { label: "KAWIN", value: "KAWIN" },
                 { label: "JANDA", value: "JANDA" },
                 { label: "DUDA", value: "DUDA" },
               ],
@@ -783,6 +798,21 @@ export default function UpsertPermohonan({ record }: { record?: IDapem }) {
                 setData({
                   ...data,
                   aw_job: e,
+                }),
+            }}
+          />
+          <FormInput
+            data={{
+              mode: "vertical",
+              label: "No Telepon",
+              type: "text",
+              class: "flex-1",
+              required: true,
+              value: data.aw_phone,
+              onChange: (e: string) =>
+                setData({
+                  ...data,
+                  aw_phone: e,
                 }),
             }}
           />
@@ -889,7 +919,7 @@ export default function UpsertPermohonan({ record }: { record?: IDapem }) {
         style={{ marginTop: 5 }}
         loading={loading}
       >
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-4 flex-wrap">
           <FormInput
             data={{
               mode: "vertical",
@@ -1043,8 +1073,8 @@ export default function UpsertPermohonan({ record }: { record?: IDapem }) {
         loading={loading}
       >
         <div className="flex gap-2 flex-wrap">
-          <div className="w-full flex gap-2 flex-col sm:flex-row">
-            <div className="flex-1 flex gap-2 flex-wrap">
+          <div className="w-full flex gap-8 flex-col sm:flex-row">
+            <div className="flex-1 flex gap-4 flex-wrap">
               <FormInput
                 data={{
                   mode: "vertical",
@@ -1216,14 +1246,17 @@ export default function UpsertPermohonan({ record }: { record?: IDapem }) {
                         c_gov: find.Sumdan.c_gov,
                         c_account: find.Sumdan.c_account,
                         c_stamp: find.Sumdan.c_stamps,
+                        c_infomation: find.Sumdan.c_information,
+                        c_provisi: find.Sumdan.c_provisi,
                         rounded: find.Sumdan.rounded,
+                        rounded_sumdan: find.Sumdan.rounded_sumdan,
                         tbo: find.Sumdan.tbo,
                       });
                     }
                   }}
                 />
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-4">
                 <FormInput
                   data={{
                     mode: "vertical",
@@ -1321,14 +1354,40 @@ export default function UpsertPermohonan({ record }: { record?: IDapem }) {
                       }),
                   }}
                 />
+                <FormInput
+                  data={{
+                    mode: "vertical",
+                    label: "Pembulatan Mitra",
+                    type: "text",
+                    class: "flex-1",
+                    value: IDRFormat(data.rounded_sumdan),
+                    onChange: (e: string) =>
+                      setData({
+                        ...data,
+                        rounded_sumdan: IDRToNumber(e || "0"),
+                      }),
+                  }}
+                />
+                <FormInput
+                  data={{
+                    mode: "vertical",
+                    label: "Jenis Asuransi",
+                    type: "select",
+                    class: "flex-1",
+                    options: [{ label: "BUMI PUTERA", value: "BUMI PUTERA" }],
+                    value: data.insurance_type,
+                    onChange: (e: string) =>
+                      setData({ ...data, insurance_type: e as EMarginType }),
+                  }}
+                />
               </div>
             </div>
           </div>
         </div>
         <Divider titlePlacement="left">Rincian Biaya</Divider>
-        <div className="flex gap-4 flex-col sm:flex-row">
+        <div className="flex gap-8 flex-col sm:flex-row items-end">
           <div className="flex-1 flex-col gap-1">
-            <div className="flex justify-between border-b border-dashed my-1">
+            <div className="flex justify-between border-b border-dashed my-2">
               <div className="flex-1">Administrasi</div>
               <div className="flex gap-2 flex-2">
                 <Input
@@ -1364,7 +1423,7 @@ export default function UpsertPermohonan({ record }: { record?: IDapem }) {
                 />
               </div>
             </div>
-            <div className="flex justify-between border-b border-dashed my-1">
+            <div className="flex justify-between border-b border-dashed my-2">
               <div className="flex-1">Asuransi</div>
               <div className="flex gap-2 flex-2">
                 <Input
@@ -1379,6 +1438,7 @@ export default function UpsertPermohonan({ record }: { record?: IDapem }) {
                     })
                   }
                   type={"number"}
+                  disabled
                 />
                 <Input
                   size="small"
@@ -1388,7 +1448,31 @@ export default function UpsertPermohonan({ record }: { record?: IDapem }) {
                 />
               </div>
             </div>
-            <div className="flex justify-between border-b border-dashed my-1">
+            <div className="flex justify-between border-b border-dashed my-2">
+              <div className="flex-1">Provisi</div>
+              <div className="flex gap-2 flex-2">
+                <Input
+                  size="small"
+                  style={{ width: 80 }}
+                  suffix={<span className="text-xs italic opacity-70">%</span>}
+                  value={data.c_provisi}
+                  onChange={(e) =>
+                    setData({
+                      ...data,
+                      c_provisi: Number(e.target.value || 0),
+                    })
+                  }
+                  type={"number"}
+                />
+                <Input
+                  size="small"
+                  disabled
+                  value={IDRFormat((data.plafond * data.c_provisi) / 100)}
+                  style={{ textAlign: "right", color: "black" }}
+                />
+              </div>
+            </div>
+            <div className="flex justify-between border-b border-dashed my-2">
               <div className="flex-1">Tatalaksana</div>
               <div className="flex gap-2 flex-2">
                 <Input
@@ -1404,7 +1488,7 @@ export default function UpsertPermohonan({ record }: { record?: IDapem }) {
                 />
               </div>
             </div>
-            <div className="flex justify-between border-b border-dashed my-1">
+            <div className="flex justify-between border-b border-dashed my-2">
               <div className="flex-1">Buka Rekening</div>
               <div className="flex gap-2 flex-2">
                 <Input
@@ -1420,7 +1504,23 @@ export default function UpsertPermohonan({ record }: { record?: IDapem }) {
                 />
               </div>
             </div>
-            <div className="flex justify-between border-b border-dashed my-1">
+            <div className="flex justify-between border-b border-dashed my-2">
+              <div className="flex-1">Flagging</div>
+              <div className="flex gap-2 flex-2">
+                <Input
+                  size="small"
+                  value={IDRFormat(data.c_infomation)}
+                  style={{ textAlign: "right", color: "black" }}
+                  onChange={(e) =>
+                    setData({
+                      ...data,
+                      c_infomation: IDRToNumber(e.target.value || "0"),
+                    })
+                  }
+                />
+              </div>
+            </div>
+            <div className="flex justify-between border-b border-dashed my-2">
               <div className="flex-1">Materai</div>
               <div className="flex gap-2 flex-2">
                 <Input
@@ -1437,7 +1537,7 @@ export default function UpsertPermohonan({ record }: { record?: IDapem }) {
                 />
               </div>
             </div>
-            <div className="flex justify-between border-b border-dashed my-1">
+            <div className="flex justify-between border-b border-dashed my-2">
               <div className="flex-1">Mutasi</div>
               <div className="flex gap-2 flex-2">
                 <Input
@@ -1456,19 +1556,21 @@ export default function UpsertPermohonan({ record }: { record?: IDapem }) {
             </div>
             <div className="flex justify-between border-t mt-3 text-red-500 font-bold">
               <div className="flex-1">Total Biaya</div>
-              <div className="text-right">{IDRFormat(GetBiaya(data))}</div>
+              <div className="text-right">
+                {IDRFormat(GetDapem(data).biaya)}
+              </div>
             </div>
           </div>
           <div className="flex-1">
-            <div className="flex justify-between my-1 italic">
+            <div className="flex justify-between my-2 italic">
               <span>Angsuran</span>
               <span>{IDRFormat(temp.angsuran)}</span>
             </div>
-            <div className="flex justify-between my-1 italic">
+            <div className="flex justify-between my-2 italic">
               <span>Sisa Gaji</span>
               <span>{IDRFormat(data.Debitur.salary - temp.angsuran)}</span>
             </div>
-            <div className="flex justify-between my-1 border-b rounded italic">
+            <div className="flex justify-between my-2 border-b rounded italic">
               <span>Debt Service Ratio</span>
               <span>
                 {(temp.angsuran / (data.Debitur.salary / 100)).toFixed(2)}% /{" "}
@@ -1476,11 +1578,11 @@ export default function UpsertPermohonan({ record }: { record?: IDapem }) {
               </span>
             </div>
             <div className="my-5"></div>
-            <div className="flex justify-between border-b border-dashed my-1 font-bold text-blue-600">
+            <div className="flex justify-between border-b border-dashed my-2 font-bold text-blue-600">
               <span>Terima Kotor</span>
-              <span>{IDRFormat(data.plafond - GetBiaya(data))}</span>
+              <span>{IDRFormat(data.plafond - GetDapem(data).biaya)}</span>
             </div>
-            <div className="flex justify-between border-b border-dashed my-1">
+            <div className="flex justify-between border-b border-dashed my-2">
               <div className="flex-1">Blokir Angsuran</div>
               <div className="flex gap-2 flex-2">
                 <Input
@@ -1504,7 +1606,47 @@ export default function UpsertPermohonan({ record }: { record?: IDapem }) {
                 />
               </div>
             </div>
-            <div className="flex gap-2 justify-between items-center my-1">
+            <div className="flex justify-between border-b border-dashed my-2">
+              <div className="flex-1">Retensi Angsuran</div>
+              <div className="flex gap-2 flex-2">
+                <Input
+                  size="small"
+                  style={{ width: 80 }}
+                  suffix={<span className="text-xs italic opacity-70">%</span>}
+                  value={data.c_retensi}
+                  onChange={(e) =>
+                    setData({
+                      ...data,
+                      c_retensi: Number(e.target.value || 0),
+                    })
+                  }
+                  type={"number"}
+                />
+                <Input
+                  size="small"
+                  disabled
+                  value={IDRFormat(data.c_retensi * temp.angsuran)}
+                  style={{ textAlign: "right", color: "black" }}
+                />
+              </div>
+            </div>
+            <div className="flex gap-2 justify-between items-center my-2">
+              <div className="flex-1">Bpp</div>
+              <div className="flex gap-2 flex-2">
+                <Input
+                  size="small"
+                  value={IDRFormat(data.c_bpp || 0)}
+                  style={{ textAlign: "right", color: "red" }}
+                  onChange={(e) =>
+                    setData({
+                      ...data,
+                      c_bpp: IDRToNumber(e.target.value || "0"),
+                    })
+                  }
+                />
+              </div>
+            </div>
+            <div className="flex gap-2 justify-between items-center my-2">
               <div className="flex-1">Nominal Takeover</div>
               <div className="flex gap-2 flex-2">
                 <Input
@@ -1520,16 +1662,9 @@ export default function UpsertPermohonan({ record }: { record?: IDapem }) {
                 />
               </div>
             </div>
-            <div className="flex justify-between border-b border-dashed my-1 font-bold text-green-600">
+            <div className="flex justify-between border-b border-dashed my-2 font-bold text-green-600">
               <span>Terima Bersih</span>
-              <span>
-                {IDRFormat(
-                  data.plafond -
-                    (GetBiaya(data) +
-                      data.c_takeover +
-                      data.c_blokir * temp.angsuran),
-                )}
-              </span>
+              <span>{IDRFormat(GetDapem(data).tb)}</span>
             </div>
           </div>
         </div>
@@ -1543,7 +1678,7 @@ export default function UpsertPermohonan({ record }: { record?: IDapem }) {
         style={{ marginTop: 5 }}
         loading={loading}
       >
-        <div className="flex flex-col sm:flex-row gap-2 flex-wrap">
+        <div className="flex flex-col sm:flex-row gap-4 flex-wrap">
           <FormInput
             data={{
               mode: "vertical",
@@ -1613,7 +1748,7 @@ export default function UpsertPermohonan({ record }: { record?: IDapem }) {
         style={{ marginTop: 5 }}
         loading={loading}
       >
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-4">
           <FormInput
             data={{
               label: "Berkas SLIK (PDF)",
@@ -1704,10 +1839,16 @@ const defaultData: IDapem = {
   c_account: 0,
   c_mutasi: 0,
   c_blokir: 0,
+  c_retensi: 0,
   c_takeover: 0,
+  c_infomation: 0,
+  c_provisi: 0,
+  c_bpp: 0,
   tbo: 0,
   rounded: 0,
+  rounded_sumdan: 0,
   margin_type: "ANUITAS",
+  insurance_type: "BUMI PUTERA",
 
   takeover_from: null,
   takeover_date: null,
@@ -1736,6 +1877,7 @@ const defaultData: IDapem = {
   aw_job: null,
   aw_address: null,
   aw_relate: null,
+  aw_phone: null,
 
   f_name: null,
   f_relate: null,
@@ -1770,6 +1912,7 @@ const defaultData: IDapem = {
   date_contract: null,
 
   file_slik: null,
+  file_proses: null,
   file_submission: null,
   video_interview: null,
   video_insurance: null,

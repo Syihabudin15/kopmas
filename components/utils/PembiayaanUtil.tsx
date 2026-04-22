@@ -50,45 +50,6 @@ export function GetMaxPlafond(
   return maxPlafond;
 }
 
-// export const GetAngsuran = (
-//   dapem:IDapem
-// ) => {
-//   if (dapem.margin_type === "FLAT") {
-//     const pokok = dapem.plafond / dapem.tenor;
-//     const mg = dapem.c_margin+dapem.c_margin_sumdan;
-//     const margin = (dapem.plafond * (mg / 100)) / 12;
-//     const angsuran = pokok + margin;
-//     return {
-//       pokok,
-//       margin,
-//       angsuran: round
-//         ? Math.round(angsuran / rounded) * rounded
-//         : Math.ceil(angsuran / rounded) * rounded,
-//     };
-//   } else if (type === "ANUITAS") {
-//     const r = bunga / 12 / 100;
-
-//     const angsuran =
-//       (plafond * (r * Math.pow(1 + r, tenor))) / (Math.pow(1 + r, tenor) - 1);
-//     const pokok = plafond / tenor;
-//     const margin = angsuran - pokok;
-
-//     return {
-//       angsuran: round
-//         ? Math.round(angsuran / rounded) * rounded
-//         : Math.ceil(angsuran / rounded) * rounded,
-//       pokok,
-//       margin,
-//     };
-//   } else {
-//     return {
-//       pokok: 0,
-//       margin: 0,
-//       angsuran: 0,
-//     };
-//   }
-// };
-
 export const GetAngsuran = (
   plafond: number,
   tenor: number,
@@ -105,8 +66,12 @@ export const GetAngsuran = (
       pokok,
       margin,
       angsuran: round
-        ? Math.round(angsuran / rounded) * rounded
-        : Math.ceil(angsuran / rounded) * rounded,
+        ? angsuran
+          ? Math.round(angsuran / rounded) * rounded
+          : 0
+        : angsuran
+          ? Math.ceil(angsuran / rounded) * rounded
+          : 0,
     };
   } else if (type === "ANUITAS") {
     const r = bunga / 12 / 100;
@@ -118,8 +83,12 @@ export const GetAngsuran = (
 
     return {
       angsuran: round
-        ? Math.round(angsuran / rounded) * rounded
-        : Math.ceil(angsuran / rounded) * rounded,
+        ? angsuran
+          ? Math.round(angsuran / rounded) * rounded
+          : 0
+        : angsuran
+          ? Math.ceil(angsuran / rounded) * rounded
+          : 0,
       pokok,
       margin,
     };
@@ -132,12 +101,80 @@ export const GetAngsuran = (
   }
 };
 
-export const GetBiaya = (data: IDapem) => {
-  const adm = data.plafond * ((data.c_adm + data.c_adm_sumdan) / 100);
-  const asuransi = data.plafond * (data.c_insurance / 100);
-  return (
-    adm + asuransi + data.c_gov + data.c_account + data.c_stamp + data.c_mutasi
+export const GetDapem = (data: IDapem, birtdate?: Date, startdate?: Date) => {
+  const adm = data.plafond * ((data.c_adm + (data.c_adm_sumdan ?? 0)) / 100);
+  const provisi = data.plafond * (data.c_provisi / 100);
+  const insurance = GetInsurance(
+    data.Debitur ? data.Debitur.birthdate : birtdate || new Date(),
+    data.date_contract || startdate || new Date(),
+    data.tenor,
+    data.insurance_type || undefined,
   );
+  const asuransi = data.plafond * (insurance / 100);
+  const angs = GetAngsuran(
+    data.plafond,
+    data.tenor,
+    data.c_margin + (data.c_margin_sumdan ?? 0),
+    data.margin_type,
+    data.rounded,
+  ).angsuran;
+  const blok = data.c_blokir * angs;
+  const retensi = data.c_retensi * angs;
+  const biaya =
+    adm +
+    asuransi +
+    data.c_gov +
+    data.c_account +
+    data.c_stamp +
+    data.c_mutasi +
+    data.c_infomation +
+    provisi;
+
+  const lastbiaya = biaya + blok + retensi + data.c_takeover + data.c_bpp;
+  const tb = data.plafond - lastbiaya;
+  return { biaya, blok, lastbiaya, tb };
+};
+
+export const GetSisaPokokMargin = (data: IDapem) => {
+  const periode = data.Angsuran.find((d) =>
+    moment(d.date_pay).isSame(moment().toDate(), "month"),
+  );
+  const prev = data.Angsuran.filter(
+    (d) =>
+      moment(d.date_pay).isBefore(moment().toDate(), "month") &&
+      d.date_paid === null,
+  );
+  return {
+    principal: periode
+      ? periode.date_paid
+        ? periode.remaining
+        : periode.remaining + periode.principal
+      : data.plafond,
+    count: periode
+      ? periode.date_paid
+        ? periode.counter
+        : periode.counter + 1
+      : data.tenor,
+    prevcount: periode
+      ? periode.date_paid
+        ? prev.length
+        : prev.length + 1
+      : 0,
+    prevvalueprincipal: periode
+      ? periode.date_paid
+        ? prev.reduce((acc, curr) => acc + curr.principal, 0)
+        : prev.reduce((acc, curr) => acc + curr.principal, 0) +
+          periode.principal
+      : 0,
+    prevvalueall: periode
+      ? periode.date_paid
+        ? prev.reduce((acc, curr) => acc + curr.principal + curr.margin, 0)
+        : prev.reduce((acc, curr) => acc + curr.principal + curr.margin, 0) +
+          periode.margin +
+          periode.principal
+      : 0,
+    install: periode ? periode.principal + periode.margin : 0,
+  };
 };
 
 export function GetRoman(number: number): string {
@@ -163,3 +200,36 @@ export function serializeForApi<T>(data: T): T {
     JSON.stringify(data, (_, v) => (typeof v === "bigint" ? v.toString() : v)),
   );
 }
+
+export const GetInsurance = (
+  birthdate: Date,
+  startdate: Date,
+  tenor: number,
+  insType?: string,
+) => {
+  switch (insType) {
+    case "BUMI PUTERA": {
+      return GetBumiPutera(birthdate, startdate, tenor);
+    }
+    default: {
+      return GetBumiPutera(birthdate, startdate, tenor);
+    }
+  }
+};
+
+const GetBumiPutera = (birthdate: Date, startdate: Date, tenor: number) => {
+  const birth = moment(birthdate);
+  const start = moment(startdate).set("date", 1).add(1, "month");
+  const end = moment(start).add(tenor, "month").subtract(1, "day");
+
+  const daysdif = start.diff(birth, "day");
+  const ageround = Math.round(daysdif / 365.25);
+
+  const monthsdiff = end.diff(start, "months");
+  const jkround = Math.round(monthsdiff / 12);
+
+  const year = ageround + jkround;
+  const rate = tenor < 181 && ageround > 54 ? 0.9 : 0;
+  // const premi = year > 85 ? 0 : rate * jkround * plafond;
+  return year > 85 ? 0 : rate * jkround;
+};

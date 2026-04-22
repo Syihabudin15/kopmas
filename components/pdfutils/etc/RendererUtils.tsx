@@ -46,7 +46,12 @@ export const ListKeyValue = ({
   data,
   rightvalue,
 }: {
-  data: { key: string; value: string | undefined | null; style?: any }[];
+  data: {
+    key: string;
+    value: string | undefined | null;
+    style?: any;
+    currency?: boolean;
+  }[];
   rightvalue?: boolean;
 }) => (
   <View>
@@ -62,9 +67,27 @@ export const ListKeyValue = ({
       >
         <Text style={{ width: 100 }}>{d.key}</Text>
         <Text style={{ width: 10 }}>:</Text>
-        <Text style={{ flex: 1, ...(rightvalue && { textAlign: "right" }) }}>
-          {d.value}
-        </Text>
+        {d.currency ? (
+          <View
+            style={{
+              display: "flex",
+              flexDirection: "row",
+              justifyContent: "space-between",
+              gap: 4,
+            }}
+          >
+            <Text>Rp. </Text>
+            <Text
+              style={{ flex: 1, ...(rightvalue && { textAlign: "right" }) }}
+            >
+              {d.value}
+            </Text>
+          </View>
+        ) : (
+          <Text style={{ flex: 1, ...(rightvalue && { textAlign: "right" }) }}>
+            {d.value}
+          </Text>
+        )}
       </View>
     ))}
   </View>

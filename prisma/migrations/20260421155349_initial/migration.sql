@@ -20,15 +20,23 @@ CREATE TABLE `Sumdan` (
     `logo` VARCHAR(191) NULL,
     `address` TEXT NULL,
     `phone` VARCHAR(191) NULL,
+    `email` VARCHAR(191) NULL,
     `tbo` INTEGER NOT NULL DEFAULT 3,
     `rounded` INTEGER NOT NULL DEFAULT 1000,
+    `rounded_sumdan` INTEGER NOT NULL DEFAULT 1,
     `limit` BIGINT NOT NULL DEFAULT 0,
     `c_margin` DOUBLE NOT NULL,
     `c_adm` DOUBLE NOT NULL,
     `c_gov` INTEGER NOT NULL,
     `c_stamps` INTEGER NOT NULL,
     `c_account` INTEGER NOT NULL,
+    `c_information` INTEGER NOT NULL,
+    `c_provisi` INTEGER NOT NULL DEFAULT 0,
     `dsr` DOUBLE NOT NULL,
+    `sk_no` VARCHAR(191) NULL,
+    `sk_date` DATETIME(3) NULL,
+    `pic1` VARCHAR(191) NULL,
+    `pic2` VARCHAR(191) NULL,
     `status` BOOLEAN NOT NULL DEFAULT true,
     `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updated_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -72,6 +80,14 @@ CREATE TABLE `User` (
     `phone` VARCHAR(191) NULL,
     `target` INTEGER NOT NULL DEFAULT 0,
     `position` VARCHAR(191) NULL,
+    `pkwt_status` VARCHAR(191) NULL,
+    `start_pkwt` DATETIME(3) NULL,
+    `end_pkwt` DATETIME(3) NULL,
+    `nik` VARCHAR(191) NULL,
+    `salary` INTEGER NOT NULL DEFAULT 0,
+    `t_transport` INTEGER NOT NULL DEFAULT 0,
+    `t_position` INTEGER NOT NULL DEFAULT 0,
+    `ptkp` VARCHAR(191) NULL,
     `status` BOOLEAN NOT NULL DEFAULT true,
     `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updated_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -172,10 +188,16 @@ CREATE TABLE `Dapem` (
     `c_account` INTEGER NOT NULL,
     `c_mutasi` INTEGER NOT NULL,
     `c_blokir` INTEGER NOT NULL,
+    `c_retensi` INTEGER NOT NULL,
     `c_takeover` INTEGER NOT NULL,
+    `c_bpp` INTEGER NOT NULL,
+    `c_provisi` DOUBLE NOT NULL DEFAULT 0,
+    `c_infomation` INTEGER NOT NULL,
     `tbo` INTEGER NOT NULL,
     `rounded` INTEGER NOT NULL,
+    `rounded_sumdan` INTEGER NOT NULL DEFAULT 0,
     `margin_type` ENUM('FLAT', 'ANUITAS') NOT NULL,
+    `insurance_type` VARCHAR(191) NULL,
     `takeover_from` VARCHAR(191) NULL,
     `takeover_date` DATETIME(3) NULL,
     `mutasi_from` VARCHAR(191) NULL,
@@ -198,7 +220,10 @@ CREATE TABLE `Dapem` (
     `aw_nik` VARCHAR(191) NULL,
     `aw_birthdate` DATETIME(3) NULL,
     `aw_birthplace` VARCHAR(191) NULL,
+    `aw_job` VARCHAR(191) NULL,
+    `aw_address` VARCHAR(191) NULL,
     `aw_relate` VARCHAR(191) NULL,
+    `aw_phone` VARCHAR(191) NULL,
     `f_name` VARCHAR(191) NULL,
     `f_relate` VARCHAR(191) NULL,
     `f_phone` VARCHAR(191) NULL,
@@ -229,6 +254,7 @@ CREATE TABLE `Dapem` (
     `no_contract` VARCHAR(191) NOT NULL,
     `date_contract` DATETIME(3) NULL,
     `file_slik` VARCHAR(191) NULL,
+    `file_proses` VARCHAR(191) NULL,
     `file_submission` VARCHAR(191) NULL,
     `video_interview` VARCHAR(191) NULL,
     `video_insurance` VARCHAR(191) NULL,
@@ -319,7 +345,41 @@ CREATE TABLE `Angsuran` (
     `date_pay` DATETIME(3) NOT NULL,
     `date_paid` DATETIME(3) NULL,
     `remaining` INTEGER NOT NULL,
+    `inst_sumdan` INTEGER NOT NULL DEFAULT 0,
+    `fee_banpot` INTEGER NOT NULL DEFAULT 0,
     `dapemId` VARCHAR(191) NOT NULL,
+
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `CategoryOfAccount` (
+    `id` VARCHAR(191) NOT NULL,
+    `name` VARCHAR(191) NOT NULL,
+    `type` ENUM('ASSET', 'KEWAJIBAN', 'MODAL', 'PENDAPATAN', 'BEBAN') NOT NULL,
+    `status` BOOLEAN NOT NULL DEFAULT true,
+    `parentId` VARCHAR(191) NULL,
+
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `JournalEntry` (
+    `id` VARCHAR(191) NOT NULL,
+    `date` DATETIME(3) NOT NULL,
+
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `JournalDetail` (
+    `id` VARCHAR(191) NOT NULL,
+    `debit` INTEGER NOT NULL DEFAULT 0,
+    `credit` INTEGER NOT NULL DEFAULT 0,
+    `desciption` VARCHAR(191) NULL,
+    `journalEntryId` VARCHAR(191) NOT NULL,
+    `categoryOfAccountId` VARCHAR(191) NOT NULL,
+    `userId` VARCHAR(191) NULL,
 
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -377,3 +437,15 @@ ALTER TABLE `Pelunasan` ADD CONSTRAINT `Pelunasan_dapemId_fkey` FOREIGN KEY (`da
 
 -- AddForeignKey
 ALTER TABLE `Angsuran` ADD CONSTRAINT `Angsuran_dapemId_fkey` FOREIGN KEY (`dapemId`) REFERENCES `Dapem`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `CategoryOfAccount` ADD CONSTRAINT `CategoryOfAccount_parentId_fkey` FOREIGN KEY (`parentId`) REFERENCES `CategoryOfAccount`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `JournalDetail` ADD CONSTRAINT `JournalDetail_journalEntryId_fkey` FOREIGN KEY (`journalEntryId`) REFERENCES `JournalEntry`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `JournalDetail` ADD CONSTRAINT `JournalDetail_categoryOfAccountId_fkey` FOREIGN KEY (`categoryOfAccountId`) REFERENCES `CategoryOfAccount`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `JournalDetail` ADD CONSTRAINT `JournalDetail_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;

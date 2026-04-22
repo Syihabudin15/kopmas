@@ -8,6 +8,7 @@ import {
   IPageProps,
   ISumdanDropping,
 } from "@/libs/IInterfaces";
+import { useAccess } from "@/libs/Permission";
 import {
   PrinterOutlined,
   RobotOutlined,
@@ -31,6 +32,7 @@ export default function Page() {
   const [dropping, setdropping] = useState<IDropping>(defaultDropping);
   const [open, setOpen] = useState(false);
   const { modal } = App.useApp();
+  const { hasAccess } = useAccess("/pencairan/print");
 
   const getData = async () => {
     setLoading(true);
@@ -109,15 +111,17 @@ export default function Page() {
         styles={{ body: { padding: 5 } }}
       >
         <div className="my-1">
-          <Button
-            size="small"
-            icon={<PrinterOutlined />}
-            type="primary"
-            onClick={() => setOpen(true)}
-            disabled={selecteds.length === 0}
-          >
-            Cetak SI
-          </Button>
+          {hasAccess("write") && (
+            <Button
+              size="small"
+              icon={<PrinterOutlined />}
+              type="primary"
+              onClick={() => setOpen(true)}
+              disabled={selecteds.length === 0}
+            >
+              Cetak SI
+            </Button>
+          )}
         </div>
         <Table
           columns={columnSumdan}
@@ -304,7 +308,7 @@ const columnDapem: TableProps<IDapem>["columns"] = [
       return (
         <div>
           <p>{record.Debitur.fullname}</p>
-          <p className="opacity-70">{record.nopen}</p>
+          <p className="opacity-80 text-xs">@{record.nopen}</p>
         </div>
       );
     },
