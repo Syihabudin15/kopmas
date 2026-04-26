@@ -25,6 +25,7 @@ import {
   Sumdan,
 } from "@prisma/client";
 import {
+  App,
   Button,
   Card,
   Descriptions,
@@ -45,6 +46,7 @@ export default function Page() {
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const { hasAccess } = useAccess("/simulasi");
+  const { message } = App.useApp();
 
   useEffect(() => {
     const { year, month } = GetFullAge(data.birthdate, data.created_at);
@@ -59,12 +61,14 @@ export default function Page() {
       data.Produk?.id &&
       newAv.flatMap((a) => a.ProdukPembiayaan).length === 0
     ) {
-      return setData({
+      message.error("Produk tidak tersedia!");
+      setData({
         ...defaultData,
         birthdate: data.birthdate,
         created_at: data.created_at,
         salary: data.salary,
       });
+      return;
     }
     const maxTenn = GetMaxTenor(data.Produk.max_paid, year, month);
     const maxTen =
@@ -90,6 +94,13 @@ export default function Page() {
       data.margin_type,
       data.Sumdan.rounded,
     ).angsuran;
+    if (angs > data.salary * 0.95) {
+      message.error(
+        "Angsuran lebih dari 95%, mohon sesuaikan kembali pembiayaan!",
+      );
+      setData((prev) => ({ ...prev, tenor: 0, plafond: 0 }));
+      return;
+    }
     setData((prev) => ({
       ...prev,
       max_tenor: maxTen,
